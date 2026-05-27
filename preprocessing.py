@@ -32,20 +32,38 @@ def segment_signal(data, window_size=500, overlap=0.5):
     return segments
 
 
-def load_and_preprocess_data(data_dir='data', window_size=500, overlap=0.5, sample_rate=100):
+def _get_cache_path(data_dir, window_size, overlap):
+    """根据参数生成缓存文件路径。"""
+    cache_name = f"features_cache_w{window_size}_o{overlap}.npz"
+    return os.path.join(data_dir, cache_name)
+
+
+def load_and_preprocess_data(data_dir='data', window_size=500, overlap=0.5, sample_rate=100, use_cache=True):
     """
-    加载原始数据，切分窗口，提取特征。
+    加载原始数据，切分窗口，提取特征。支持特征缓存。
 
     参数:
         data_dir: 数据目录
         window_size: 窗口大小
         overlap: 重叠比例
         sample_rate: 采样率
+        use_cache: 是否使用缓存（默认True）
     返回:
         X: 特征矩阵
         y: 标签数组
         feature_names: 特征名列表
     """
+    cache_path = _get_cache_path(data_dir, window_size, overlap)
+
+    if use_cache and os.path.exists(cache_path):
+        print("  发现特征缓存，直接加载...")
+        cached = np.load(cache_path, allow_pickle=True)
+        X = cached['X']
+        y = cached['y']
+        feature_names = cached['feature_names'].tolist()
+        print(f"  从缓存加载完成: {X.shape[0]} 个样本, {X.shape[1]} 个特征")
+        return X, y, feature_names
+
     metadata_path = os.path.join(data_dir, 'metadata.csv')
     metadata = pd.read_csv(metadata_path)
 
@@ -70,6 +88,10 @@ def load_and_preprocess_data(data_dir='data', window_size=500, overlap=0.5, samp
     X = feature_df.values
     feature_names = feature_df.columns.tolist()
     y = np.array(all_labels)
+
+    if use_cache:
+        np.savez(cache_path, X=X, y=y, feature_names=np.array(feature_names))
+        print(f"  特征已缓存到: {cache_path}")
 
     print(f"  特征提取完成: {X.shape[0]} 个样本, {X.shape[1]} 个特征")
     return X, y, feature_names

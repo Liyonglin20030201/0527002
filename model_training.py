@@ -6,31 +6,53 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, GridSearchCV
 import joblib
 import os
 import matplotlib.pyplot as plt
 
 
-def train_random_forest(X_train, y_train, n_estimators=100, random_state=42):
+def train_random_forest(X_train, y_train, tune_hyperparams=True, random_state=42):
     """
-    训练随机森林分类器。
+    训练随机森林分类器，支持GridSearchCV超参数调优。
 
     参数:
         X_train: 训练特征
         y_train: 训练标签
-        n_estimators: 树的数量
+        tune_hyperparams: 是否进行网格搜索调优
         random_state: 随机种子
     返回:
-        训练好的模型
+        训练好的最佳模型
     """
+    if tune_hyperparams:
+        print("  正在进行GridSearchCV超参数调优...")
+        param_grid = {
+            'n_estimators': [50, 100, 200],
+            'max_depth': [10, 20, None],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4],
+        }
+        base_model = RandomForestClassifier(random_state=random_state, n_jobs=-1)
+        grid_search = GridSearchCV(
+            base_model,
+            param_grid,
+            cv=3,
+            scoring='accuracy',
+            n_jobs=-1,
+            verbose=0,
+        )
+        grid_search.fit(X_train, y_train)
+        print(f"  最佳参数: {grid_search.best_params_}")
+        print(f"  最佳交叉验证准确率: {grid_search.best_score_:.4f}")
+        return grid_search.best_estimator_
+
     model = RandomForestClassifier(
-        n_estimators=n_estimators,
+        n_estimators=100,
         max_depth=20,
         min_samples_split=5,
         min_samples_leaf=2,
         random_state=random_state,
-        n_jobs=-1
+        n_jobs=-1,
     )
     model.fit(X_train, y_train)
     return model

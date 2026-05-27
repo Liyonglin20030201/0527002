@@ -7,6 +7,14 @@ import sys
 import os
 import time
 
+from data_collection import collect_dataset
+from preprocessing import load_and_preprocess_data, prepare_training_data
+from model_training import (
+    train_random_forest, evaluate_model, cross_validate_model,
+    get_feature_importance, save_model
+)
+from prediction import WashingMachineDiagnostor, run_diagnosis_demo
+
 
 def main():
     print()
@@ -19,8 +27,6 @@ def main():
     # ============ 步骤1: 数据采集 ============
     print("[步骤 1/5] 数据采集")
     print("-" * 40)
-    from data_collection import collect_dataset
-
     if not os.path.exists('data/metadata.csv'):
         print("  生成模拟振动数据...")
         collect_dataset(n_samples_per_class=50, duration_sec=10, sample_rate=100)
@@ -32,8 +38,6 @@ def main():
     print("[步骤 2/5] 特征提取")
     print("[步骤 3/5] 数据预处理")
     print("-" * 40)
-    from preprocessing import load_and_preprocess_data, prepare_training_data
-
     print("  加载数据并提取特征...")
     X, y, feature_names = load_and_preprocess_data(
         data_dir='data', window_size=500, overlap=0.5, sample_rate=100
@@ -46,14 +50,9 @@ def main():
     # ============ 步骤4: 模型训练 ============
     print("[步骤 4/5] 模型训练")
     print("-" * 40)
-    from model_training import (
-        train_random_forest, evaluate_model, cross_validate_model,
-        get_feature_importance, save_model
-    )
-
     print("  训练随机森林分类器...")
     start_time = time.time()
-    model = train_random_forest(X_train, y_train, n_estimators=100)
+    model = train_random_forest(X_train, y_train)
     train_time = time.time() - start_time
     print(f"  训练耗时: {train_time:.2f} 秒")
 
@@ -67,8 +66,6 @@ def main():
     # ============ 步骤5: 预测与展示 ============
     print("[步骤 5/5] 故障预测演示")
     print("-" * 40)
-    from prediction import WashingMachineDiagnostor, run_diagnosis_demo
-
     run_diagnosis_demo()
 
     print("\n" + "=" * 60)
